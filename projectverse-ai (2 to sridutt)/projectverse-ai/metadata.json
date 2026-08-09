@@ -1,0 +1,6 @@
+{
+  "name": "ProjectVerse",
+  "description": "An Instagram-style social platform for engineering students to showcase specifications, blueprints, and share spec reels.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

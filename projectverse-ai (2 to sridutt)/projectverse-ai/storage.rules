@@ -1,0 +1,30 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Project files path
+    match /project-files/{allPaths=**} {
+      allow read, write: if true;
+    }
+
+    // Users path
+    match /users/{allPaths=**} {
+      allow read, write: if true;
+    }
+
+    // Projects path
+    match /projects/{allPaths=**} {
+      allow read, write: if true;
+    }
+
+    // Reels path
+    match /reels/{allPaths=**} {
+      allow read, write: if true;
+    }
+
+    // Uploads & General bucket fallback
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+  }
+}

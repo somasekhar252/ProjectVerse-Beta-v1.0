@@ -1,0 +1,9 @@
+{
+  "name": "projectverse-workspace",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix \"projectverse-ai (2 to sridutt)/projectverse-ai\" run dev",
+    "build": "npm --prefix \"projectverse-ai (2 to sridutt)/projectverse-ai\" run build",
+    "start": "npm --prefix \"projectverse-ai (2 to sridutt)/projectverse-ai\" run start"
+  }
+}
