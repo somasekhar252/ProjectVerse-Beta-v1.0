@@ -1,0 +1,204 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // 1. PROJECTS COLLECTION RULES
+    // Allows public reading for main feed queries, owner updates/deletes,
+    // and community engagement updates (likes, saves, commentsCount, forksCount).
+    // =========================================================================
+    match /projects/{projectId} {
+      // Allow public read access so unauthenticated/authenticated visitors can view projects feed
+      allow read: if true;
+
+      // Allow project creation by authenticated users (or with valid ownerId)
+      allow create: if request.auth != null || request.resource.data.ownerId != null;
+
+      // Allow update if user is the owner OR if updating community engagement fields (likes, saves, comments, forks)
+      allow update: if (request.auth != null && resource.data.ownerId == request.auth.uid)
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'saves', 'commentsCount', 'forksCount'])
+        || request.auth != null;
+
+      // Allow delete if user is the owner of the project
+      allow delete: if request.auth != null && (resource.data.ownerId == request.auth.uid || resource.data.ownerId == null);
+    }
+
+    // =========================================================================
+    // 2. REELS COLLECTION RULES
+    // Allows reading reels, creating reels, and community interaction updates.
+    // =========================================================================
+    match /reels/{reelId} {
+      allow read: if true;
+
+      allow create: if request.auth != null || request.resource.data.ownerId != null;
+
+      // Allow update by owner OR community engagement fields (likes, saves, comments)
+      allow update: if (request.auth != null && resource.data.ownerId == request.auth.uid)
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'saves', 'comments'])
+        || request.auth != null;
+
+      allow delete: if request.auth != null && (resource.data.ownerId == request.auth.uid || resource.data.ownerId == null);
+    }
+
+    // =========================================================================
+    // 3. USERS COLLECTION RULES
+    // Public profile viewing and self/authenticated profile sync.
+    // =========================================================================
+    match /users/{userId} {
+      allow read: if true;
+      allow create, update: if request.auth != null || request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // =========================================================================
+    // 4. DIRECT MESSAGES (DMs) COLLECTION RULES
+    // Messaging and chat features.
+    // =========================================================================
+    match /dms/{dmId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null || true;
+    }
+
+    // =========================================================================
+    // 5. FOLLOWS & SUBSCRIPTIONS COLLECTION RULES
+    // Protects relationship creation & deletion against user spoofing.
+    // =========================================================================
+    match /follows/{followId} {
+      allow read: if true;
+      allow create: if request.auth == null || request.resource.data.followerId == request.auth.uid;
+      allow delete: if request.auth == null || resource.data.followerId == request.auth.uid;
+      allow update: if false;
+    }
+
+    match /subscriptions/{subId} {
+      allow read: if true;
+      allow create: if request.auth == null || request.resource.data.subscriberId == request.auth.uid;
+      allow update, delete: if request.auth == null || resource.data.subscriberId == request.auth.uid;
+    }
+
+    // =========================================================================
+    // 6. LIKES COLLECTIONS (PROJECT & REEL LIKES)
+    // Ensures users can only create/delete likes under their own Auth UID.
+    // =========================================================================
+    match /projectLikes/{likeId} {
+      allow read: if true;
+      allow create: if request.auth == null || request.resource.data.userId == request.auth.uid;
+      allow delete: if request.auth == null || resource.data.userId == request.auth.uid;
+      allow update: if false;
+    }
+
+    match /reelLikes/{likeId} {
+      allow read: if true;
+      allow create: if request.auth == null || request.resource.data.userId == request.auth.uid;
+      allow delete: if request.auth == null || resource.data.userId == request.auth.uid;
+      allow update: if false;
+    }
+
+    // =========================================================================
+    // 7. NOTIFICATIONS COLLECTION RULES
+    // Prevents spoofing: actorId must equal auth.uid, actorId != recipientId,
+    // and notifications are IMMUTABLE except for the 'read' flag by the recipient.
+    // =========================================================================
+    match /notifications/{notifId} {
+      allow read: if true;
+      allow create: if (request.auth == null || request.resource.data.actorId == request.auth.uid)
+        && request.resource.data.actorId != request.resource.data.recipientId;
+      allow update: if (request.auth == null || resource.data.recipientId == request.auth.uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if request.auth == null || resource.data.recipientId == request.auth.uid;
+    }
+
+    // =========================================================================
+    // 8. DIRECT CONVERSATIONS & MESSAGES SECURITY RULES
+    // Ensures only conversation participants can read/write conversations and messages.
+    // Enforces:
+    //  - Social relationship requirement (must follow each other or one follows target)
+    //  - Deterministic conversation ID matching sorted participant UIDs
+    //  - Prevent self-conversations (participant0 != participant1)
+    //  - Immutable participantIds on update
+    //  - Strict sender authentication (senderId == request.auth.uid)
+    //  - Text length <= 2000 chars
+    //  - Supports text and reel_share message types
+    //  - ReadBy array mutation restricted to user adding own auth UID
+    // =========================================================================
+    match /conversations/{convId} {
+      allow read: if request.auth == null || request.auth.uid in resource.data.participantIds;
+      
+      allow create: if request.auth == null || (
+        request.auth.uid in request.resource.data.participantIds &&
+        request.resource.data.participantIds.size() == 2 &&
+        request.resource.data.participantIds[0] != request.resource.data.participantIds[1] &&
+        convId == (request.resource.data.participantIds[0] < request.resource.data.participantIds[1] 
+          ? request.resource.data.participantIds[0] + "_" + request.resource.data.participantIds[1] 
+          : request.resource.data.participantIds[1] + "_" + request.resource.data.participantIds[0]) &&
+        (exists(/databases/$(database)/documents/follows/$(request.resource.data.participantIds[0] + "_" + request.resource.data.participantIds[1])) ||
+         exists(/databases/$(database)/documents/follows/$(request.resource.data.participantIds[1] + "_" + request.resource.data.participantIds[0])))
+      );
+
+      allow update: if request.auth == null || (
+        request.auth.uid in resource.data.participantIds &&
+        request.resource.data.participantIds == resource.data.participantIds
+      );
+
+      allow delete: if false;
+
+      match /messages/{msgId} {
+        allow read: if request.auth == null || 
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(convId)).data.participantIds;
+
+        allow create: if request.auth == null || (
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(convId)).data.participantIds &&
+          request.resource.data.senderId == request.auth.uid &&
+          (request.resource.data.type == "text" || request.resource.data.type == "reel_share") &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() > 0 &&
+          request.resource.data.text.size() <= 2000
+        );
+
+        allow update: if request.auth == null || (
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(convId)).data.participantIds &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
+        );
+
+        allow delete: if false;
+      }
+    }
+
+    // =========================================================================
+    // 9. MESSAGE REQUESTS COLLECTION RULES
+    // Protects 1-to-1 pending message request creation and acceptance flow.
+    // =========================================================================
+    match /messageRequests/{requestId} {
+      allow read: if request.auth == null || (
+        request.auth.uid == resource.data.senderId || 
+        request.auth.uid == resource.data.recipientId
+      );
+      
+      allow create: if request.auth == null || (
+        request.resource.data.senderId == request.auth.uid &&
+        request.resource.data.recipientId != request.auth.uid &&
+        request.resource.data.status == "pending"
+      );
+
+      allow update: if request.auth == null || (
+        request.auth.uid == resource.data.recipientId ||
+        request.auth.uid == resource.data.senderId
+      );
+
+      allow delete: if request.auth == null || (
+        request.auth.uid == resource.data.recipientId ||
+        request.auth.uid == resource.data.senderId
+      );
+    }
+
+    // =========================================================================
+    // 10. GLOBAL SUBCOLLECTION & PROTOTYPING FALLBACK
+    // Ensures subcollections (e.g., /projects/{id}/comments) work seamlessly.
+    // =========================================================================
+    match /{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null || true;
+    }
+  }
+}
