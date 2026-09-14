@@ -377,7 +377,7 @@ users: { id, name, email, college }`); // 15. Database Design
       // 1. Upload Thumbnail to Cloudinary via backend
       if (thumbnailFile) {
         setUploadStatusMessage("Uploading Project Thumbnail to Cloudinary...");
-        const res = await uploadToBackendCloudinary(thumbnailFile, "image", (pct) => {
+        const res = await uploadToBackendCloudinary(thumbnailFile, "project-thumbnail", (pct) => {
           setUploadProgressState(prev => ({ ...prev, thumbnail: pct }));
         });
         finalThumbnailUrl = res.secure_url;
@@ -387,7 +387,7 @@ users: { id, name, email, college }`); // 15. Database Design
       // 2. Upload Demo Video to Cloudinary via backend
       if (demoVideoFile) {
         setUploadStatusMessage("Uploading Demo Video to Cloudinary...");
-        const res = await uploadToBackendCloudinary(demoVideoFile, "video", (pct) => {
+        const res = await uploadToBackendCloudinary(demoVideoFile, "project-video", (pct) => {
           setUploadProgressState(prev => ({ ...prev, video: pct }));
         });
         finalDemoVideoUrl = res.secure_url;
@@ -397,7 +397,7 @@ users: { id, name, email, college }`); // 15. Database Design
       // 3. Upload Workspace ZIP or Project Report PDF to Cloudinary via backend
       if (workspaceFile) {
         setUploadStatusMessage("Uploading Workspace Files / PDF Report to Cloudinary...");
-        const res = await uploadToBackendCloudinary(workspaceFile, "workspace", (pct) => {
+        const res = await uploadToBackendCloudinary(workspaceFile, "project-file", (pct) => {
           setUploadProgressState(prev => ({ ...prev, workspace: pct }));
         });
         finalWorkspaceUrl = res.secure_url;
@@ -508,7 +508,7 @@ users: { id, name, email, college }`); // 15. Database Design
 
       if (reelVideoFile) {
         setUploadStatusMessage("Uploading Reel video directly to Cloudinary Media Library...");
-        const res = await uploadToBackendCloudinary(reelVideoFile, "video", (pct) => {
+        const res = await uploadToBackendCloudinary(reelVideoFile, "reel-video", (pct) => {
           setUploadProgressState(prev => ({ ...prev, reel: pct }));
         });
 

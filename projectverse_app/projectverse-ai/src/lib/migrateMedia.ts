@@ -1,6 +1,6 @@
 import { collection, getDocs, doc, setDoc } from "firebase/firestore";
 import { firebaseDb } from "./firebase";
-import { uploadDirectToCloudinaryRest } from "./cloudinary";
+import { uploadDirectToCloudinaryRest, CloudinaryUploadEndpoint } from "./cloudinary";
 
 export interface MediaReportItem {
   collectionName: "projects" | "reels";
@@ -56,7 +56,7 @@ async function checkUrlAccessibility(url: string): Promise<boolean> {
  */
 async function reuploadToNewCloudinary(
   url: string,
-  resourceType: "image" | "video" | "workspace"
+  targetEndpoint: CloudinaryUploadEndpoint
 ): Promise<string> {
   const response = await fetch(url);
   if (!response.ok) {
@@ -64,9 +64,11 @@ async function reuploadToNewCloudinary(
   }
   const blob = await response.blob();
   const filename = url.split("/").pop() || `migrated_asset_${Date.now()}`;
-  const file = new File([blob], filename, { type: blob.type || (resourceType === "video" ? "video/mp4" : "image/png") });
+  const isVideo = targetEndpoint.includes("video");
+  const isRaw = targetEndpoint.includes("file") || targetEndpoint === "workspace";
+  const file = new File([blob], filename, { type: blob.type || (isVideo ? "video/mp4" : isRaw ? "application/zip" : "image/png") });
 
-  const result = await uploadDirectToCloudinaryRest(file, resourceType);
+  const result = await uploadDirectToCloudinaryRest(file, targetEndpoint);
   return result.secure_url;
 }
 
@@ -96,13 +98,13 @@ export async function runCloudinaryMediaMigration(dryRun: boolean = true): Promi
     for (const docSnap of projectsSnap.docs) {
       report.totalDocumentsScanned++;
       const data = docSnap.data();
-      const mediaFields: { field: string; resourceType: "image" | "video" | "workspace"; legacyField: string }[] = [
-        { field: "thumbnailUrl", resourceType: "image", legacyField: "legacyThumbnailUrl" },
-        { field: "demoVideoUrl", resourceType: "video", legacyField: "legacyDemoVideoUrl" },
-        { field: "workspaceFileUrl", resourceType: "workspace", legacyField: "legacyWorkspaceFileUrl" }
+      const mediaFields: { field: string; targetEndpoint: CloudinaryUploadEndpoint; legacyField: string }[] = [
+        { field: "thumbnailUrl", targetEndpoint: "project-thumbnail", legacyField: "legacyThumbnailUrl" },
+        { field: "demoVideoUrl", targetEndpoint: "project-video", legacyField: "legacyDemoVideoUrl" },
+        { field: "workspaceFileUrl", targetEndpoint: "project-file", legacyField: "legacyWorkspaceFileUrl" }
       ];
 
-      for (const { field, resourceType, legacyField } of mediaFields) {
+      for (const { field, targetEndpoint, legacyField } of mediaFields) {
         const val = data[field];
         if (val && typeof val === "string" && isLegacyCloudinaryUrl(val)) {
           report.oldUrlsFound++;
@@ -121,7 +123,7 @@ export async function runCloudinaryMediaMigration(dryRun: boolean = true): Promi
 
             if (!dryRun) {
               try {
-                const newUrl = await reuploadToNewCloudinary(val, resourceType);
+                const newUrl = await reuploadToNewCloudinary(val, targetEndpoint);
                 item.newUrl = newUrl;
                 item.status = "migrated";
                 report.migratedUrls++;
@@ -143,7 +145,7 @@ export async function runCloudinaryMediaMigration(dryRun: boolean = true): Promi
           } else {
             report.unavailableUrls++;
             item.status = "unavailable";
-            item.error = "ASSET_UNAVAILABLE_ORIGINAL_REQUIRED: Old Cloudinary asset return non-200 status.";
+            item.error = "ASSET_UNAVAILABLE_ORIGINAL_REQUIRED: Old Cloudinary asset returned non-200 status.";
           }
 
           report.items.push(item);
@@ -158,12 +160,12 @@ export async function runCloudinaryMediaMigration(dryRun: boolean = true): Promi
     for (const docSnap of reelsSnap.docs) {
       report.totalDocumentsScanned++;
       const data = docSnap.data();
-      const mediaFields: { field: string; resourceType: "image" | "video" | "workspace"; legacyField: string }[] = [
-        { field: "videoUrl", resourceType: "video", legacyField: "legacyVideoUrl" },
-        { field: "thumbnail", resourceType: "image", legacyField: "legacyThumbnail" }
+      const mediaFields: { field: string; targetEndpoint: CloudinaryUploadEndpoint; legacyField: string }[] = [
+        { field: "videoUrl", targetEndpoint: "reel-video", legacyField: "legacyVideoUrl" },
+        { field: "thumbnail", targetEndpoint: "reel-thumbnail", legacyField: "legacyThumbnail" }
       ];
 
-      for (const { field, resourceType, legacyField } of mediaFields) {
+      for (const { field, targetEndpoint, legacyField } of mediaFields) {
         const val = data[field];
         if (val && typeof val === "string" && isLegacyCloudinaryUrl(val)) {
           report.oldUrlsFound++;
@@ -182,7 +184,7 @@ export async function runCloudinaryMediaMigration(dryRun: boolean = true): Promi
 
             if (!dryRun) {
               try {
-                const newUrl = await reuploadToNewCloudinary(val, resourceType);
+                const newUrl = await reuploadToNewCloudinary(val, targetEndpoint);
                 item.newUrl = newUrl;
                 item.status = "migrated";
                 report.migratedUrls++;

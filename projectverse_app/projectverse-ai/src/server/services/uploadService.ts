@@ -8,12 +8,22 @@ export interface CloudinaryUploadResponse {
   format: string;
   resource_type: "image" | "video" | "raw";
   bytes: number;
+  asset_id?: string;
+  folder?: string;
+  original_filename?: string;
 }
 
 export interface RollbackAssetItem {
   public_id: string;
   resource_type?: "image" | "video" | "raw";
 }
+
+export type UploadTargetFolder = 
+  | "projects/thumbnails" 
+  | "projects/demo-videos" 
+  | "projects/files" 
+  | "reels/videos" 
+  | "reels/thumbnails";
 
 /**
  * Uploads a local temporary file to Cloudinary in the designated folder,
@@ -22,7 +32,7 @@ export interface RollbackAssetItem {
  */
 export async function uploadFileToCloudinary(
   filePath: string,
-  folder: "projectverse/thumbnails" | "projectverse/demo-videos" | "projectverse/reels" | "projectverse/workspace",
+  folder: UploadTargetFolder,
   resourceType: "image" | "video" | "raw" | "auto" = "auto",
   originalFilename?: string
 ): Promise<CloudinaryUploadResponse> {
@@ -42,12 +52,26 @@ export async function uploadFileToCloudinary(
 
     const result = await cloudinary.uploader.upload(filePath, uploadOptions);
 
+    console.log(`[UploadService Asset Diagnostics]`, {
+      status: 200,
+      ok: true,
+      secure_url: result.secure_url,
+      public_id: result.public_id,
+      resource_type: result.resource_type || resourceType,
+      asset_id: result.asset_id,
+      folder: result.folder || folder,
+      original_filename: result.original_filename || originalFilename
+    });
+
     return {
       secure_url: result.secure_url,
       public_id: result.public_id,
       format: result.format || "raw",
       resource_type: (result.resource_type as any) || resourceType,
-      bytes: result.bytes || 0
+      bytes: result.bytes || 0,
+      asset_id: result.asset_id,
+      folder: result.folder || folder,
+      original_filename: result.original_filename || originalFilename
     };
   } catch (error: any) {
     console.error(`[UploadService Error] Failed uploading ${filePath} to Cloudinary folder ${folder}:`, error);

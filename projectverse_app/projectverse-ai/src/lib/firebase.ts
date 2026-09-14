@@ -41,7 +41,7 @@ export const firebaseApp = initializeApp(firebaseConfig);
 export const firebaseAuth = getAuth(firebaseApp);
 export const firebaseDb = getFirestore(firebaseApp);
 export const firebaseStorage = getStorage(firebaseApp);
-export const firebaseAnalytics = getAnalytics(firebaseApp);
+export const firebaseAnalytics = typeof window !== "undefined" ? getAnalytics(firebaseApp) : null;
 
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: "select_account" });
