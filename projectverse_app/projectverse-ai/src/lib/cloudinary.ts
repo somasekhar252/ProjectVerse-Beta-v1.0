@@ -99,9 +99,13 @@ export async function uploadDirectToCloudinaryRest(
 
     const returnedUrl: string = data.secure_url;
 
-    // Verify returned URL cloud name
+    // Verify returned URL cloud name strictly
     if (returnedUrl.includes("vo4ufzoi")) {
-      throw new Error(`Migration error: Asset uploaded to OLD Cloudinary environment (vo4ufzoi). Returned URL: ${returnedUrl}`);
+      throw new Error(`Cloudinary upload returned a legacy/incorrect Cloudinary environment (vo4ufzoi). Returned URL: ${returnedUrl}`);
+    }
+
+    if (!returnedUrl.includes(`/${cloudName}/`) && !returnedUrl.includes(`v1_1/${cloudName}/`)) {
+      throw new Error(`Cloudinary upload returned a URL not matching target cloud name "${cloudName}". Returned URL: ${returnedUrl}`);
     }
 
     const diagnosticObj: UploadAssetMetadata = {

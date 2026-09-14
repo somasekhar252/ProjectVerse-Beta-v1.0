@@ -62,7 +62,8 @@ export default function ReelsView({
   initialReelId,
   onClearInitialReelId,
   reels: propReels,
-  setReels: propSetReels
+  setReels: propSetReels,
+  onNavigateProfile
 }: ReelsViewProps) {
   const [localReels, setLocalReels] = useState<Reel[]>([]);
   const reels = propReels !== undefined ? propReels : localReels;
@@ -379,6 +380,7 @@ export default function ReelsView({
             onNotInterested={() => handleNotInterested(reel.id)}
             onReport={() => handleReportReel(reel.id)}
             onShowToast={showToast}
+            onNavigateProfile={onNavigateProfile}
           />
         ))}
       </div>
@@ -662,6 +664,7 @@ interface ReelCardProps {
   onNotInterested: any;
   onReport: any;
   onShowToast: any;
+  onNavigateProfile?: (userId: string) => void;
 }
 
 function ReelCard({
@@ -680,7 +683,8 @@ function ReelCard({
   onFollow,
   onNotInterested,
   onReport,
-  onShowToast
+  onShowToast,
+  onNavigateProfile
 }: ReelCardProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -977,19 +981,44 @@ function ReelCard({
       {/* RIGHT SIDEBAR ACTION BUTTONS OVERLAYS - INSTAGRAM FLOATING STYLE */}
       <div className="absolute right-4 bottom-32 z-10 flex flex-col gap-4 text-white">
         
-        {/* Creator profile & follow indicator */}
-        <div className="flex flex-col items-center gap-1">
-          <div className="w-10 h-10 rounded-full border border-white/20 bg-zinc-900 flex items-center justify-center font-extrabold uppercase relative shadow-md">
-            {(reel.creatorName || reel.ownerName || "S").charAt(0)}
-            <button
-              onClick={onFollow}
-              className={`absolute -bottom-1 -right-1 p-0.5 rounded-full border border-black transition-all ${
-                followed ? "bg-emerald-500 text-white" : "bg-violet-600 text-white hover:scale-110"
-              }`}
-            >
-              {followed ? <UserCheck className="w-3 h-3" /> : <UserPlus className="w-3 h-3" />}
-            </button>
-          </div>
+        {/* Creator profile & follow indicator (Sibling interactive controls) */}
+        <div className="flex flex-col items-center gap-1 relative">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const creatorId = reel.creatorId || reel.ownerId;
+              if (onNavigateProfile && creatorId) {
+                onNavigateProfile(creatorId);
+              }
+            }}
+            aria-label={`View ${reel.creatorName || reel.ownerName || "creator"}'s profile`}
+            className="w-10 h-10 rounded-full border border-white/20 bg-zinc-900 flex items-center justify-center font-extrabold uppercase relative shadow-md hover:opacity-80 transition-all cursor-pointer overflow-hidden group focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+          >
+            {reel.creatorAvatar ? (
+              <img
+                src={reel.creatorAvatar}
+                alt={reel.creatorName || reel.ownerName || "Creator avatar"}
+                className="w-full h-full object-cover rounded-full group-hover:scale-105 transition-transform"
+              />
+            ) : (
+              <span>{(reel.creatorName || reel.ownerName || "S").charAt(0)}</span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onFollow();
+            }}
+            aria-label={followed ? "Unfollow creator" : "Follow creator"}
+            className={`absolute -bottom-1 -right-1 p-1 rounded-full border border-black transition-all cursor-pointer z-10 ${
+              followed ? "bg-emerald-500 text-white" : "bg-violet-600 text-white hover:scale-110"
+            }`}
+          >
+            {followed ? <UserCheck className="w-3 h-3" /> : <UserPlus className="w-3 h-3" />}
+          </button>
         </div>
 
         {/* Like Button */}
@@ -1095,11 +1124,22 @@ function ReelCard({
         
         {/* Creator Identity & Metadata */}
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <h3 className="font-extrabold text-sm tracking-tight text-white">
-              @{reel.creatorName || reel.ownerName || "Suryasekhar_Sen"}
-            </h3>
-            <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-[8px] font-bold text-zinc-400">
+          <div className="flex items-center gap-2 max-w-full">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                const creatorId = reel.creatorId || reel.ownerId;
+                if (onNavigateProfile && creatorId) {
+                  onNavigateProfile(creatorId);
+                }
+              }}
+              aria-label={`View @${reel.creatorName || reel.ownerName || "creator"} profile`}
+              className="font-extrabold text-sm tracking-tight text-white hover:text-violet-400 hover:underline transition-colors text-left cursor-pointer truncate max-w-full focus:outline-none"
+            >
+              @{reel.creatorName ? reel.creatorName.toLowerCase().replace(/\s+/g, "") : reel.ownerName ? reel.ownerName.toLowerCase().replace(/\s+/g, "") : "innovator"}
+            </button>
+            <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-[8px] font-bold text-zinc-400 shrink-0">
               {reel.creatorRole || "Builder"}
             </span>
           </div>

@@ -9,8 +9,9 @@ interface UserAvatarProps {
   size?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
   showBorder?: boolean;
   className?: string;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent) => void;
   isEditable?: boolean;
+  ariaLabel?: string;
 }
 
 const SIZE_MAP = {
@@ -30,7 +31,8 @@ export default function UserAvatar({
   showBorder = false,
   className = "",
   onClick,
-  isEditable = false
+  isEditable = false,
+  ariaLabel
 }: UserAvatarProps) {
   const seed = userId || name || "default_user";
   const primarySrc = resolveUserAvatarUrl(avatarUrl, seed);
@@ -57,11 +59,8 @@ export default function UserAvatar({
     ? "ring-2 ring-violet-500/30 dark:ring-violet-400/40 p-0.5" 
     : "";
 
-  return (
-    <div
-      onClick={onClick}
-      className={`relative inline-block rounded-full shrink-0 ${onClick ? "cursor-pointer group" : ""} ${className}`}
-    >
+  const content = (
+    <>
       <img
         src={imageSrc}
         alt={name || "User profile photo"}
@@ -77,6 +76,25 @@ export default function UserAvatar({
           <Camera className="w-5 h-5 drop-shadow-md" />
         </div>
       )}
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={ariaLabel || `View ${name || "user"}'s profile`}
+        className={`relative inline-block rounded-full shrink-0 cursor-pointer group hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-violet-500/50 ${className}`}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div className={`relative inline-block rounded-full shrink-0 ${className}`}>
+      {content}
     </div>
   );
 }
