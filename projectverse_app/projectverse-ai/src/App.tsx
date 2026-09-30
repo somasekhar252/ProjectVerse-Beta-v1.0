@@ -649,6 +649,14 @@ export default function App() {
 
   const handleDeleteProject = async (id: string) => {
     if (!currentUser) return;
+    const targetProject = projects.find(p => p.id === id);
+    if (targetProject) {
+      const isOwner = String(currentUser.id) === String(targetProject.ownerId || targetProject.creatorId);
+      if (!isOwner) {
+        alert("Unauthorized: Only the project owner can delete this project.");
+        return;
+      }
+    }
     if (!window.confirm("Are you sure you want to delete this project? This action cannot be undone.")) return;
     try {
       // 1. Delete from backend DB / REST (if available)
@@ -658,7 +666,7 @@ export default function App() {
       }).catch(console.warn);
 
       // 2. Also delete from Firebase if we saved there
-      await import("./lib/firebase").then(m => m.deleteProjectFromFirestore(id)).catch(console.warn);
+      await import("./lib/firebase").then(m => m.deleteProjectFromFirestore(id, currentUser.id)).catch(console.warn);
       
       await fetchProjects();
       alert("Project deleted successfully.");

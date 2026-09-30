@@ -16,12 +16,11 @@ service cloud.firestore {
       allow create: if request.auth != null || request.resource.data.ownerId != null;
 
       // Allow update if user is the owner OR if updating community engagement fields (likes, saves, comments, forks)
-      allow update: if (request.auth != null && resource.data.ownerId == request.auth.uid)
-        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'saves', 'commentsCount', 'forksCount'])
-        || request.auth != null;
+      allow update: if (request.auth != null && (resource.data.ownerId == request.auth.uid || resource.data.creatorId == request.auth.uid))
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'saves', 'commentsCount', 'forksCount']);
 
       // Allow delete if user is the owner of the project
-      allow delete: if request.auth != null && (resource.data.ownerId == request.auth.uid || resource.data.ownerId == null);
+      allow delete: if request.auth != null && (resource.data.ownerId == request.auth.uid || resource.data.creatorId == request.auth.uid);
     }
 
     // =========================================================================
@@ -34,11 +33,10 @@ service cloud.firestore {
       allow create: if request.auth != null || request.resource.data.ownerId != null;
 
       // Allow update by owner OR community engagement fields (likes, saves, comments)
-      allow update: if (request.auth != null && resource.data.ownerId == request.auth.uid)
-        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'saves', 'comments'])
-        || request.auth != null;
+      allow update: if (request.auth != null && (resource.data.ownerId == request.auth.uid || resource.data.creatorId == request.auth.uid))
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'saves', 'comments']);
 
-      allow delete: if request.auth != null && (resource.data.ownerId == request.auth.uid || resource.data.ownerId == null);
+      allow delete: if request.auth != null && (resource.data.ownerId == request.auth.uid || resource.data.creatorId == request.auth.uid);
     }
 
     // =========================================================================

@@ -30,7 +30,7 @@ import CreatorNotificationButton from "./social/CreatorNotificationButton";
 import UserAvatar from "./social/UserAvatar";
 import AvatarManagementModal from "./social/AvatarManagementModal";
 import { fetchUserFollowersCount, fetchUserFollowingCount, canMessageUser } from "../lib/socialService";
-import { fetchUserFromFirestore } from "../lib/firebase";
+import { fetchUserFromFirestore, firebaseAuth } from "../lib/firebase";
 
 interface UserProfileProps {
   currentUser: User | null;
@@ -510,54 +510,61 @@ export default function UserProfile({
                         </span>
 
                         {/* THREE DOTS MENU BAR */}
-                        <div className="relative">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenMenuProjectId(prev => prev === p.id ? null : p.id);
-                            }}
-                            className="p-1 rounded-lg bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/20 text-white shadow-[inset_1px_1px_2px_rgba(255,255,255,0.4),0_2px_6px_rgba(0,0,0,0.3)] transition-all cursor-pointer flex items-center justify-center active:scale-95 z-30"
-                            title="Project Actions"
-                          >
-                            <MoreVertical className="w-3.5 h-3.5" />
-                          </button>
-
-                          {/* CLAYMORPHIC DROPDOWN MENU BAR */}
-                          {isMenuOpen && (
-                            <div 
-                              onClick={(e) => e.stopPropagation()}
-                              className="absolute top-7 right-0 z-50 min-w-[140px] p-2 rounded-2xl bg-zinc-900/95 border border-white/20 shadow-[8px_8px_20px_rgba(0,0,0,0.7),-4px_-4px_12px_rgba(255,255,255,0.1)] backdrop-blur-xl flex flex-col gap-1.5 animate-in fade-in zoom-in-95 duration-150"
-                            >
-                              {/* CLAYMORPHIC EDIT OPTION */}
+                        {(() => {
+                          const activeUid = firebaseAuth.currentUser?.uid || currentUser?.id;
+                          const isItemOwner = Boolean(activeUid && p && (String(activeUid) === String(p.ownerId || p.creatorId || (p as any).userId)));
+                          if (!isItemOwner) return null;
+                          return (
+                            <div className="relative">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setOpenMenuProjectId(null);
-                                  onEditProject(p.id);
+                                  setOpenMenuProjectId(prev => prev === p.id ? null : p.id);
                                 }}
-                                className="w-full px-3 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-2 shadow-[inset_1.5px_1.5px_3px_rgba(255,255,255,0.4),inset_-1.5px_-1.5px_3px_rgba(0,0,0,0.3),0_4px_12px_rgba(124,58,237,0.4)] active:scale-95 transition-all cursor-pointer"
+                                className="p-1 rounded-lg bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/20 text-white shadow-[inset_1px_1px_2px_rgba(255,255,255,0.4),0_2px_6px_rgba(0,0,0,0.3)] transition-all cursor-pointer flex items-center justify-center active:scale-95 z-30"
+                                title="Project Actions"
                               >
-                                <Edit className="w-3.5 h-3.5 text-violet-200 shrink-0" />
-                                <span>Edit</span>
+                                <MoreVertical className="w-3.5 h-3.5" />
                               </button>
 
-                              {/* CLAYMORPHIC DELETE OPTION */}
-                              {onDeleteProject && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenMenuProjectId(null);
-                                    onDeleteProject(p.id);
-                                  }}
-                                  className="w-full px-3 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white text-xs font-bold flex items-center gap-2 shadow-[inset_1.5px_1.5px_3px_rgba(255,255,255,0.4),inset_-1.5px_-1.5px_3px_rgba(0,0,0,0.3),0_4px_12px_rgba(225,29,72,0.4)] active:scale-95 transition-all cursor-pointer"
+                              {/* CLAYMORPHIC DROPDOWN MENU BAR */}
+                              {isMenuOpen && (
+                                <div 
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="absolute top-7 right-0 z-50 min-w-[140px] p-2 rounded-2xl bg-zinc-900/95 border border-white/20 shadow-[8px_8px_20px_rgba(0,0,0,0.7),-4px_-4px_12px_rgba(255,255,255,0.1)] backdrop-blur-xl flex flex-col gap-1.5 animate-in fade-in zoom-in-95 duration-150"
                                 >
-                                  <Trash2 className="w-3.5 h-3.5 text-rose-200 shrink-0" />
-                                  <span>Delete</span>
-                                </button>
+                                  {/* CLAYMORPHIC EDIT OPTION */}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOpenMenuProjectId(null);
+                                      onEditProject(p.id);
+                                    }}
+                                    className="w-full px-3 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-2 shadow-[inset_1.5px_1.5px_3px_rgba(255,255,255,0.4),inset_-1.5px_-1.5px_3px_rgba(0,0,0,0.3),0_4px_12px_rgba(124,58,237,0.4)] active:scale-95 transition-all cursor-pointer"
+                                  >
+                                    <Edit className="w-3.5 h-3.5 text-violet-200 shrink-0" />
+                                    <span>Edit</span>
+                                  </button>
+
+                                  {/* CLAYMORPHIC DELETE OPTION */}
+                                  {onDeleteProject && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenMenuProjectId(null);
+                                        onDeleteProject(p.id);
+                                      }}
+                                      className="w-full px-3 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white text-xs font-bold flex items-center gap-2 shadow-[inset_1.5px_1.5px_3px_rgba(255,255,255,0.4),inset_-1.5px_-1.5px_3px_rgba(0,0,0,0.3),0_4px_12px_rgba(225,29,72,0.4)] active:scale-95 transition-all cursor-pointer"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5 text-rose-200 shrink-0" />
+                                      <span>Delete</span>
+                                    </button>
+                                  )}
+                                </div>
                               )}
                             </div>
-                          )}
-                        </div>
+                          );
+                        })()}
                       </div>
 
                       <div className="relative z-10 space-y-1">

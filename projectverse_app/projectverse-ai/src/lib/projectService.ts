@@ -360,9 +360,20 @@ export async function fetchProjectsFromFirestore(): Promise<Project[]> {
 /**
  * Deletes a project from Cloud Firestore.
  */
-export async function deleteProjectFromFirestore(projectId: string): Promise<boolean> {
+export async function deleteProjectFromFirestore(projectId: string, requesterUserId?: string): Promise<boolean> {
   try {
     const docRef = doc(firebaseDb, "projects", projectId);
+    if (requesterUserId) {
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data();
+        const ownerId = data?.ownerId || data?.creatorId;
+        if (ownerId && String(ownerId) !== String(requesterUserId)) {
+          console.warn("[Project Service] Unauthorized delete attempt for project:", projectId, "by user:", requesterUserId);
+          throw new Error("Unauthorized: Only the project owner can delete this project.");
+        }
+      }
+    }
     await deleteDoc(docRef);
     console.log("[Project Service] Project deleted successfully from Firestore:", projectId);
     return true;

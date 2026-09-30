@@ -90,6 +90,7 @@ export async function uploadDirectToCloudinaryRest(
   formData.append("folder", targetFolder);
 
   const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`;
+  console.log(`[CLOUDINARY TEST]\ncloud_name: ${cloudName}\nupload_preset: ${uploadPreset}\nendpoint: ${uploadUrl}\nresource_type: ${resourceType}\nfolder: ${targetFolder}`);
   console.log(`[Cloudinary Request] POSTing to ${uploadUrl} using preset "${uploadPreset}" (folder: ${targetFolder})...`);
 
   const parseCloudinaryResponse = (data: any, status: number): UploadAssetMetadata => {

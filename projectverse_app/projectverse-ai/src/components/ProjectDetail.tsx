@@ -357,7 +357,7 @@ export default function ProjectDetail({
     );
   }
 
-  const isOwner = currentUser && project.ownerId === currentUser.id;
+  const isOwner = Boolean(currentUser && (String(currentUser.id) === String(project.ownerId || project.creatorId)));
   const userLiked = currentUser && project.likes.includes(currentUser.id);
   const userSaved = currentUser && project.saves.includes(currentUser.id);
 

@@ -820,7 +820,8 @@ app.put("/api/projects/:id", (req, res) => {
   }
 
   const project = projects[projectIdx];
-  if (project.ownerId !== loggedInUserId) {
+  const projectOwner = project.ownerId || (project as any).creatorId;
+  if (!loggedInUserId || String(projectOwner) !== String(loggedInUserId)) {
     return res.status(403).json({ error: "Strict permission check: Only the project owner can edit this project." });
   }
 
@@ -844,7 +845,8 @@ app.delete("/api/projects/:id", (req, res) => {
   }
 
   const project = projects[projectIdx];
-  if (project.ownerId !== loggedInUserId) {
+  const projectOwner = project.ownerId || (project as any).creatorId;
+  if (!loggedInUserId || String(projectOwner) !== String(loggedInUserId)) {
     return res.status(403).json({ error: "Strict permission check: Only the project owner can delete this project." });
   }
 
